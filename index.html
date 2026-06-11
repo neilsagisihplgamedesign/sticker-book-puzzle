@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>Sticker Book Puzzle</title>
+  </head>
+  <body>
+    <div id="app">
+      <div id="game"></div>
+      <button id="end-card" class="end-card" type="button" aria-label="Open app store" style="opacity:0;pointer-events:none">
+        <div class="end-card__stage">
+          <img id="end-card-bg" class="end-card__bg" alt="" draggable="false" />
+          <div id="end-card-stickers" class="end-card__stickers" aria-hidden="true"></div>
+          <span class="end-card__shade"></span>
+          <div class="end-card__content">
+            <img id="end-card-logo" class="end-card__logo" alt="" draggable="false" />
+            <img id="end-card-cta" class="end-card__cta" alt="Play now" draggable="false" />
+          </div>
+        </div>
+      </button>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
