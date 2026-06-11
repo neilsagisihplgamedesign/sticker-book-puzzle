@@ -26,6 +26,8 @@ export const TRAY_CENTER_Y = HEIGHT - 195
 export const TRAY_TOP_Y = TRAY_CENTER_Y - TRAY_HEIGHT / 2
 export const GAME_BOTTOM_BACKGROUND_COLOR = 0x67a5e6
 export const GAME_BOTTOM_BACKGROUND_CSS = '#67a5e6'
+export const ROOM_LINE_Y = 640
+export const ROOM_LINE_CSS = '#666666'
 export const TRAY_BADGE_OFFSET_X = 102
 export const TRAY_BADGE_OFFSET_Y = -150
 export const TRAY_BADGE_LOCAL_OFFSET_Y = -80
@@ -44,7 +46,7 @@ export const IOS_STORE_URL = 'https://apps.apple.com/us/app/sticker-book-color-b
 export const ANDROID_STORE_URL = 'https://play.google.com/store/apps/details?id=com.game5mobile.sticker&hl=en'
 
 export const STICKERS = [
-  { id: 10, x: 152, y: 946, trayMax: 250 },
+  { id: 10, x: 157, y: 946, trayMax: 250 },
   { id: 14, x: 550, y: 1042, trayMax: 340 },
   { id: 7, x: 878, y: 805, trayMax: 255 },
   { id: 47, x: 540, y: 515, trayMax: 210 },
@@ -63,7 +65,7 @@ export const STICKERS = [
   { id: 45, x: 890, y: 315 },
   { id: 50, x: 405, y: 450 },
   { id: 27, x: 930, y: 515 },
-  { id: 33, x: 50, y: 588 },
+  { id: 33, x: 55, y: 588 },
   { id: 22, x: 90, y: 670 },
   { id: 29, x: 300, y: 679 },
   { id: 16, x: 395, y: 669 },
@@ -71,7 +73,7 @@ export const STICKERS = [
   { id: 35, x: 710, y: 690 },
   { id: 43, x: 818, y: 708 },
   { id: 13, x: 922, y: 705 },
-  { id: 38, x: 1018, y: 655 },
+  { id: 38, x: 995, y: 655 },
   { id: 4, x: 148, y: 842 },
   { id: 37, x: 340, y: 835 },
   { id: 24, x: 590, y: 855 },
@@ -79,8 +81,8 @@ export const STICKERS = [
   { id: 44, x: 260, y: 944 },
   { id: 19, x: 730, y: 941 },
   { id: 31, x: 810, y: 940 },
-  { id: 48, x: 997, y: 945 },
-  { id: 15, x: 50, y: 1017 },
+  { id: 48, x: 990, y: 945 },
+  { id: 15, x: 93, y: 1017 },
   { id: 21, x: 205, y: 1100 },
   { id: 49, x: 510, y: 1020 },
   { id: 28, x: 590, y: 990 },
@@ -88,12 +90,12 @@ export const STICKERS = [
   { id: 8, x: 550, y: 1164 },
   { id: 2, x: 702, y: 1166 },
   { id: 25, x: 880, y: 1142 },
-  { id: 40, x: 122, y: 1300 },
+  { id: 40, x: 132, y: 1300 },
   { id: 3, x: 282, y: 1317 },
   { id: 36, x: 480, y: 1350 },
   { id: 20, x: 669, y: 1390 },
   { id: 39, x: 855, y: 1390 },
-  { id: 9, x: 1000, y: 1320 },
+  { id: 9, x: 975, y: 1320 },
 ]
 
 export const STICKER_LAYOUT = {

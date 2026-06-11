@@ -4,6 +4,8 @@ import { COLORED, SPRITES } from './assets.js'
 import {
   GAME_BOTTOM_BACKGROUND_CSS,
   HEIGHT,
+  ROOM_LINE_CSS,
+  ROOM_LINE_Y,
   SKIP_TO_ENDCARD,
   STICKERS,
   TRAY_TOP_Y,
@@ -45,6 +47,8 @@ function layoutCanvas(game) {
 
     app?.style.setProperty('--game-tray-top-y', `${canvasTop + TRAY_TOP_Y * scale}px`)
     app?.style.setProperty('--game-bottom-bg', GAME_BOTTOM_BACKGROUND_CSS)
+    app?.style.setProperty('--game-room-line-y', `${canvasTop + ROOM_LINE_Y * scale}px`)
+    app?.style.setProperty('--game-room-line-color', ROOM_LINE_CSS)
 
     const canvas = game.canvas
     if (canvas) {
@@ -69,12 +73,18 @@ function layoutCanvas(game) {
   window.setTimeout(resize, 600)
 }
 
-function layoutEndCardStage(stage) {
+function layoutEndCardStage(stage, endCard) {
   const resize = () => {
     const viewWidth = Math.max(window.visualViewport?.width || window.innerWidth, 1)
     const viewHeight = Math.max(window.visualViewport?.height || window.innerHeight, 1)
     const baseScale = Math.min(viewWidth / WIDTH, viewHeight / HEIGHT)
     const scale = baseScale + VIEWPORT_OVERSCAN_X / WIDTH
+    const stageTop = (viewHeight - HEIGHT * scale) / 2
+    const roomLineY = stageTop + ROOM_LINE_Y * scale
+    const app = document.getElementById('app')
+
+    app?.style.setProperty('--end-card-room-line-y', `${roomLineY}px`)
+    endCard?.style.setProperty('--end-card-room-line-y', `${roomLineY}px`)
     stage.style.transform = `translate(-50%, -50%) scale(${scale})`
   }
 
@@ -95,7 +105,7 @@ function setupEndCard() {
   const cta = document.getElementById('end-card-cta')
   const stickers = document.getElementById('end-card-stickers')
 
-  layoutEndCardStage(stage)
+  layoutEndCardStage(stage, endCard)
   bg.src = SPRITES.bgColor
   bg.style.width = '1200px'
   bg.style.height = `${HEIGHT}px`
@@ -139,6 +149,9 @@ function setupEndCard() {
   endCard.addEventListener('click', triggerCTA)
   return {
     show() {
+      const app = document.getElementById('app')
+      app?.classList.remove('app--game-end-layout')
+      app?.classList.add('app--end-card-layout')
       endCard.style.opacity = ''
       endCard.style.pointerEvents = ''
       endCard.classList.add('end-card--visible')
@@ -203,7 +216,10 @@ async function boot() {
   if (game) {
     game.events.once('assets-loaded', notifyGameReady)
     game.events.once('game-started', notifyGameStart)
-    game.events.once('game-finished', notifyGameEnd)
+    game.events.once('game-finished', () => {
+      document.getElementById('app')?.classList.add('app--game-end-layout')
+      notifyGameEnd()
+    })
     game.events.once('game-complete', () => endCard.show())
   } else {
     endCard.show()
