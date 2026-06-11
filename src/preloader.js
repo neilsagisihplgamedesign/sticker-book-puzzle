@@ -20,10 +20,10 @@ export class PreloaderScene extends Phaser.Scene {
       this.load.image(`target-${sticker.id}`, NUMBERED[sticker.id])
     })
 
-    this.load.audio('correct', AUDIO.correct)
-    this.load.audio('wrong', AUDIO.wrong)
-    this.load.audio('finished', AUDIO.finished)
-    this.load.audio('bgm', AUDIO.bgm)
+    this.load.audio('correct', AUDIO.correct, { instances: 4 })
+    this.load.audio('wrong', AUDIO.wrong, { instances: 4 })
+    this.load.audio('finished', AUDIO.finished, { instances: 2 })
+    this.load.audio('bgm', AUDIO.bgm, { instances: 1 })
   }
 
   create() {

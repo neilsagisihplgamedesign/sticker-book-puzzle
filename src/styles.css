@@ -119,6 +119,7 @@ body {
 }
 
 .end-card__shade {
+  inset: -2px;
   z-index: 3000;
   background: rgba(30, 25, 16, 0.38);
 }

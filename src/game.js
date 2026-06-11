@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { AUDIO } from './assets.js'
 import {
   ACTIVE_DRAG_DEPTH,
   ACTIVE_ITERATION,
@@ -45,10 +46,14 @@ export class StickerBookScene extends Phaser.Scene {
 
   create() {
     this.sound.pauseOnBlur = false
-    this.bgm = this.sound.add('bgm', { loop: true, volume: 0.18 })
-    this.correctSfx = this.sound.add('correct', { volume: 0.65 })
-    this.wrongSfx = this.sound.add('wrong', { volume: 0.42 })
-    this.finishedSfx = this.sound.add('finished', { volume: 0.8 })
+    this.bgm = new Audio(AUDIO.bgm)
+    this.bgm.loop = true
+    this.bgm.volume = 0.18
+    this.bgm.preload = 'auto'
+    this.audioUnlocked = false
+    this.bgmPrimed = false
+    this.bgmStarted = false
+    this.bgmStartAttempts = 0
 
     this.add.image(WIDTH / 2, 0, 'bgWhite').setOrigin(0.5, 0).setDisplaySize(1200, HEIGHT)
     this.colorBg = this.add.image(WIDTH / 2, 0, 'bgColor').setOrigin(0.5, 0).setDisplaySize(1200, HEIGHT).setAlpha(0)
@@ -326,8 +331,68 @@ export class StickerBookScene extends Phaser.Scene {
     }
   }
 
+  unlockHtml5AudioTags() {
+    if (this.audioUnlocked) return
+
+    this.game.cache.audio.entries.each((key, tags) => {
+      tags.forEach((tag) => {
+        tag.dataset.locked = 'false'
+        tag.preload = 'auto'
+        if (tag.readyState < 2) {
+          tag.load()
+        }
+      })
+
+      return true
+    })
+
+    if (Array.isArray(this.sound.lockedActionsQueue)) {
+      this.sound.lockedActionsQueue.length = 0
+    }
+
+    this.sound.locked = false
+    this.audioUnlocked = true
+  }
+
+  primeAudioOnDragStart() {
+    this.unlockHtml5AudioTags()
+    this.primeBgmOnDragStart()
+  }
+
+  safePlay(key, config = {}) {
+    if (this.sound.mute) return false
+
+    this.unlockHtml5AudioTags()
+
+    return this.sound.play(key, config)
+  }
+
+  safePlaySound(sound, config = {}) {
+    if (!sound || this.sound.mute) return false
+
+    this.unlockHtml5AudioTags()
+
+    if (sound.isPlaying) return true
+
+    return sound.play(config)
+  }
+
+  primeBgmOnDragStart() {
+    if (this.bgmPrimed || this.bgmStarted || this.completed) return
+
+    this.bgm.loop = true
+    this.bgm.volume = 0
+    const playResult = this.bgm.play()
+    this.bgmPrimed = true
+
+    playResult?.catch?.(() => {
+      this.bgmPrimed = false
+    })
+  }
+
   onTrayPointerDown(pointer, sprite) {
     pointer.event?.preventDefault?.()
+    this.primeAudioOnDragStart()
     this.registerActivity()
     const position = this.getPointerGamePosition(pointer)
     if (!this.hasStarted) {
@@ -335,7 +400,6 @@ export class StickerBookScene extends Phaser.Scene {
       this.game.events.emit('game-started')
       this.startIterationTimer()
     }
-    if (!this.bgm.isPlaying) this.bgm.play()
     this.clearHandHint()
     sprite.setDepth(ACTIVE_DRAG_DEPTH).setScale(sprite.getData('homeScale') * 1.08)
     this.activeDrag = {
@@ -373,7 +437,8 @@ export class StickerBookScene extends Phaser.Scene {
       return
     }
 
-    this.wrongSfx.play()
+    this.safePlay('wrong', { volume: 0.42 })
+    this.startBgmAfterFirstDrop()
     this.tweens.add({
       targets: sprite,
       x: sprite.getData('homeX'),
@@ -391,7 +456,8 @@ export class StickerBookScene extends Phaser.Scene {
     const { sticker, target, label } = targetData
     const stickerSprite = sprite.getData('sprite')
     const badge = sprite.getData('badge')
-    this.correctSfx.play()
+    this.safePlay('correct', { volume: 0.65 })
+    this.startBgmAfterFirstDrop()
     sprite.disableInteractive()
     target.destroy()
     label.destroy()
@@ -471,6 +537,33 @@ export class StickerBookScene extends Phaser.Scene {
     })
   }
 
+  isTouchAudioEnvironment() {
+    return navigator.maxTouchPoints > 0 || 'ontouchstart' in window
+  }
+
+  startBgmAfterFirstDrop() {
+    if (this.bgmStarted || this.completed) return
+
+    this.bgm.loop = true
+    this.bgm.volume = 0.18
+    const playResult = this.bgmPrimed && !this.bgm.paused ? true : this.bgm.play()
+
+    if (playResult?.then) {
+      playResult.then(() => {
+        this.bgmStarted = true
+      }).catch(() => {
+        this.bgmStarted = false
+      })
+    } else {
+      this.bgmStarted = playResult !== false || !this.bgm.paused
+    }
+
+    if (!this.bgmStarted && this.bgmStartAttempts < 5) {
+      this.bgmStartAttempts += 1
+      this.time.delayedCall(120, () => this.startBgmAfterFirstDrop())
+    }
+  }
+
   advanceRound() {
     if (this.roundIndex < ROUNDS.length - 1) {
       this.startRound(this.roundIndex + 1)
@@ -497,8 +590,10 @@ export class StickerBookScene extends Phaser.Scene {
   completeGame() {
     if (this.completed) return
     this.completed = true
-    this.bgm.stop()
-    this.finishedSfx.play()
+    this.unlockHtml5AudioTags()
+    this.bgm.pause()
+    this.bgm.currentTime = 0
+    this.safePlay('finished', { volume: 0.8 })
     this.showRemainingStickers()
     this.game.events.emit('game-finished')
     this.tweens.add({ targets: this.colorBg, alpha: 1, duration: 540, ease: 'Sine.InOut' })

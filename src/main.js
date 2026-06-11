@@ -157,6 +157,9 @@ function createGame() {
     transparent: false,
     backgroundColor: '#ffffff',
     scene: [PreloaderScene, StickerBookScene],
+    audio: {
+      disableWebAudio: true,
+    },
     scale: {
       mode: Phaser.Scale.NONE,
       width: WIDTH,
