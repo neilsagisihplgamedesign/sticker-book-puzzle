@@ -5,6 +5,10 @@ import {
   GAME_BOTTOM_BACKGROUND_CSS,
   HEIGHT,
   ROOM_LINE_CSS,
+  ROOM_LINE_EXTENSION_LEFT_OVERLAP_PX,
+  ROOM_LINE_EXTENSION_RIGHT_OVERLAP_PX,
+  ROOM_LINE_EXTENSION_THICKNESS_PX,
+  ROOM_LINE_EXTENSION_Y_OFFSET_PX,
   ROOM_LINE_Y,
   SKIP_TO_ENDCARD,
   STICKERS,
@@ -38,24 +42,60 @@ function layoutCanvas(game) {
   const resize = () => {
     const viewWidth = Math.max(window.visualViewport?.width || window.innerWidth, 1)
     const viewHeight = Math.max(window.visualViewport?.height || window.innerHeight, 1)
-    const scale = Math.min(viewWidth / WIDTH, viewHeight / HEIGHT)
-    const canvasWidth = Math.ceil(WIDTH * scale) + VIEWPORT_OVERSCAN_X
-    const canvasHeight = Math.ceil(HEIGHT * scale)
-    const canvasLeft = Math.floor((viewWidth - canvasWidth) / 2)
-    const canvasTop = Math.floor((viewHeight - canvasHeight) / 2)
+    const viewAspect = viewWidth / viewHeight
+    const designAspect = WIDTH / HEIGHT
+    const internalWidth = viewAspect >= designAspect ? HEIGHT * viewAspect : WIDTH
+    const internalHeight = viewAspect >= designAspect ? HEIGHT : WIDTH / viewAspect
+    const renderWidth = Math.ceil(internalWidth)
+    const renderHeight = Math.ceil(internalHeight)
+    const canvasWidth = Math.ceil(viewWidth) + VIEWPORT_OVERSCAN_X
+    const canvasHeight = Math.ceil(viewHeight)
+    const offsetX = (renderWidth - WIDTH) / 2
+    const offsetY = (renderHeight - HEIGHT) / 2
+    const scaleX = canvasWidth / renderWidth
+    const scaleY = canvasHeight / renderHeight
+    const scale = Math.min(scaleX, scaleY)
     const app = document.getElementById('app')
 
-    app?.style.setProperty('--game-tray-top-y', `${canvasTop + TRAY_TOP_Y * scale}px`)
+    app?.style.setProperty('--game-tray-top-y', `${Math.round((offsetY + TRAY_TOP_Y) * scaleY)}px`)
     app?.style.setProperty('--game-bottom-bg', GAME_BOTTOM_BACKGROUND_CSS)
-    app?.style.setProperty('--game-room-line-y', `${canvasTop + ROOM_LINE_Y * scale}px`)
+    const gameRoomLineY = Math.floor((offsetY + ROOM_LINE_Y) * scaleY) + ROOM_LINE_EXTENSION_Y_OFFSET_PX
+    const gameRoomLineThickness = Math.max(1, Math.round(ROOM_LINE_EXTENSION_THICKNESS_PX * scaleY))
+    app?.style.setProperty('--game-room-line-y', `${gameRoomLineY}px`)
+    app?.style.setProperty('--game-room-line-thickness', `${gameRoomLineThickness}px`)
     app?.style.setProperty('--game-room-line-color', ROOM_LINE_CSS)
+    app?.style.setProperty('--room-line-left-overlap', `${ROOM_LINE_EXTENSION_LEFT_OVERLAP_PX}px`)
+    app?.style.setProperty('--room-line-right-overlap', `${ROOM_LINE_EXTENSION_RIGHT_OVERLAP_PX}px`)
+    const boardLeft = Math.floor(-1 + offsetX * scaleX)
+    const boardTop = Math.floor(offsetY * scaleY)
+    const boardWidth = Math.ceil(WIDTH * scaleX)
+    const boardHeight = Math.ceil(HEIGHT * scaleY)
+
+    app?.style.setProperty('--game-board-left', `${boardLeft}px`)
+    app?.style.setProperty('--game-board-top', `${boardTop}px`)
+    app?.style.setProperty('--game-board-width', `${boardWidth}px`)
+    app?.style.setProperty('--game-board-height', `${boardHeight}px`)
+    app?.style.setProperty('--game-board-right', `${Math.max(canvasWidth - boardLeft - boardWidth, 0)}px`)
+    app?.style.setProperty('--game-board-bottom', `${Math.max(canvasHeight - boardTop - boardHeight, 0)}px`)
+
+    const viewport = {
+      internalWidth: renderWidth,
+      internalHeight: renderHeight,
+      offsetX,
+      offsetY,
+      scale,
+    }
+
+    game.registry.set('viewport', viewport)
+    game.scale.resize(renderWidth, renderHeight)
+    game.events.emit('viewport-resized', viewport)
 
     const canvas = game.canvas
     if (canvas) {
       canvas.style.width = `${canvasWidth}px`
       canvas.style.height = `${canvasHeight}px`
-      canvas.style.marginLeft = `${canvasLeft}px`
-      canvas.style.marginTop = `${canvasTop}px`
+      canvas.style.marginLeft = '-1px'
+      canvas.style.marginTop = '0'
     }
   }
 
@@ -79,12 +119,27 @@ function layoutEndCardStage(stage, endCard) {
     const viewHeight = Math.max(window.visualViewport?.height || window.innerHeight, 1)
     const baseScale = Math.min(viewWidth / WIDTH, viewHeight / HEIGHT)
     const scale = baseScale + VIEWPORT_OVERSCAN_X / WIDTH
+    const stageWidth = WIDTH * scale
+    const stageLeft = Math.max((viewWidth - stageWidth) / 2, 0)
+    const stageRight = Math.max(viewWidth - stageLeft - stageWidth, 0)
     const stageTop = (viewHeight - HEIGHT * scale) / 2
-    const roomLineY = stageTop + ROOM_LINE_Y * scale
+    const roomLineY = Math.floor(stageTop + ROOM_LINE_Y * scale) + ROOM_LINE_EXTENSION_Y_OFFSET_PX
+    const roomLineThickness = Math.max(1, Math.round(ROOM_LINE_EXTENSION_THICKNESS_PX * scale))
     const app = document.getElementById('app')
 
+    app?.style.setProperty('--end-card-stage-left', `${Math.floor(stageLeft)}px`)
+    app?.style.setProperty('--end-card-stage-right', `${Math.floor(stageRight)}px`)
+    app?.style.setProperty('--room-line-left-overlap', `${ROOM_LINE_EXTENSION_LEFT_OVERLAP_PX}px`)
+    app?.style.setProperty('--room-line-right-overlap', `${ROOM_LINE_EXTENSION_RIGHT_OVERLAP_PX}px`)
     app?.style.setProperty('--end-card-room-line-y', `${roomLineY}px`)
+    app?.style.setProperty('--end-card-room-line-thickness', `${roomLineThickness}px`)
+    endCard?.style.setProperty('--end-card-stage-left', `${Math.floor(stageLeft)}px`)
+    endCard?.style.setProperty('--end-card-stage-right', `${Math.floor(stageRight)}px`)
+    endCard?.style.setProperty('--room-line-left-overlap', `${ROOM_LINE_EXTENSION_LEFT_OVERLAP_PX}px`)
+    endCard?.style.setProperty('--room-line-right-overlap', `${ROOM_LINE_EXTENSION_RIGHT_OVERLAP_PX}px`)
     endCard?.style.setProperty('--end-card-room-line-y', `${roomLineY}px`)
+    endCard?.style.setProperty('--end-card-room-line-thickness', `${roomLineThickness}px`)
+    endCard?.style.setProperty('--end-card-stage-scale', String(scale))
     stage.style.transform = `translate(-50%, -50%) scale(${scale})`
   }
 
@@ -167,8 +222,8 @@ function createGame() {
     parent: document.getElementById('game'),
     width: WIDTH,
     height: HEIGHT,
-    transparent: false,
-    backgroundColor: '#ffffff',
+    transparent: true,
+    backgroundColor: 'rgba(255,255,255,0)',
     scene: [PreloaderScene, StickerBookScene],
     audio: {
       disableWebAudio: true,

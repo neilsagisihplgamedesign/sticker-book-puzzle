@@ -9,6 +9,17 @@ import {
   HEIGHT,
   INACTIVITY_HINT_DELAY,
   ROUNDS,
+  ROOM_LINE_COUCH_MASK_COLOR,
+  ROOM_LINE_COUCH_MASK_DEPTH,
+  ROOM_LINE_COUCH_MASK_HEIGHT,
+  ROOM_LINE_COUCH_MASK_SEGMENTS,
+  ROOM_LINE_COUCH_MASK_Y,
+  ROOM_LINE_COVER_COLOR,
+  ROOM_LINE_COVER_DEPTH,
+  ROOM_LINE_COVER_ENABLED,
+  ROOM_LINE_COVER_HEIGHT,
+  ROOM_LINE_COVER_SEGMENTS,
+  ROOM_LINE_COVER_Y,
   SHOW_ALL_NUMBERED_ITEMS_FOR_LAYOUT,
   STICKERS,
   TUTORIAL_OVERLAY_ALPHA,
@@ -16,8 +27,6 @@ import {
   TRAY_BADGE_OFFSET_X,
   TRAY_BADGE_OFFSET_Y,
   TRAY_BACKGROUND_DEPTH,
-  TRAY_CENTER_Y,
-  TRAY_HEIGHT,
   TRAY_ITEM_DEPTH,
   TRAY_ITEM_HEIGHT,
   TRAY_TOP_Y,
@@ -42,6 +51,14 @@ export class StickerBookScene extends Phaser.Scene {
     this.handHint = null
     this.handHintTween = null
     this.iterationTimer = null
+    this.moveCount = 0
+    this.viewport = {
+      internalWidth: WIDTH,
+      internalHeight: HEIGHT,
+      offsetX: 0,
+      offsetY: 0,
+      scale: 1,
+    }
   }
 
   create() {
@@ -55,21 +72,102 @@ export class StickerBookScene extends Phaser.Scene {
     this.bgmStarted = false
     this.bgmStartAttempts = 0
 
-    this.add.image(WIDTH / 2, 0, 'bgWhite').setOrigin(0.5, 0).setDisplaySize(1200, HEIGHT)
-    this.colorBg = this.add.image(WIDTH / 2, 0, 'bgColor').setOrigin(0.5, 0).setDisplaySize(1200, HEIGHT).setAlpha(0)
-    this.add.rectangle(0, TRAY_TOP_Y, WIDTH, HEIGHT - TRAY_TOP_Y, GAME_BOTTOM_BACKGROUND_COLOR)
-      .setOrigin(0, 0)
+    this.bgWhite = this.add.image(WIDTH / 2, 0, 'bgWhite')
+      .setOrigin(0.5, 0)
+      .setDisplaySize(1200, HEIGHT)
+      .setDepth(0)
+    this.roomLineCovers = this.createRoomLineCovers()
+    this.colorBg = this.add.image(WIDTH / 2, 0, 'bgColor')
+      .setOrigin(0.5, 0)
+      .setDisplaySize(1200, HEIGHT)
+      .setAlpha(0)
+      .setDepth(ROOM_LINE_COUCH_MASK_DEPTH + 0.01)
+    this.bottomBg = this.add.rectangle(WIDTH / 2, TRAY_TOP_Y, WIDTH, HEIGHT - TRAY_TOP_Y, GAME_BOTTOM_BACKGROUND_COLOR)
+      .setOrigin(0.5, 0)
       .setDepth(TRAY_BACKGROUND_DEPTH - 1)
-    this.add.image(WIDTH / 2, TRAY_CENTER_Y, 'tray').setDisplaySize(WIDTH, TRAY_HEIGHT).setDepth(TRAY_BACKGROUND_DEPTH)
-
     this.hintLayer = this.add.container(0, 0).setDepth(20)
     this.dragLayer = this.add.container(0, 0).setDepth(TRAY_ITEM_DEPTH)
 
     this.input.on('pointermove', this.onPointerMove, this)
     this.input.on('pointerup', this.onPointerUp, this)
     this.input.on('pointerupoutside', this.onPointerUp, this)
+    this.game.events.on('viewport-resized', this.applyViewport, this)
+    this.applyViewport(this.game.registry.get('viewport') || this.viewport)
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.events.off('viewport-resized', this.applyViewport, this)
+    })
     this.startRound(0)
     this.game.events.emit('game-scene-ready')
+  }
+
+  applyViewport(viewport) {
+    const hadTutorialOverlay = Boolean(this.tutorialOverlay)
+    this.viewport = viewport
+    this.cameras.main.setViewport(0, 0, viewport.internalWidth, viewport.internalHeight)
+    this.cameras.main.setScroll(-viewport.offsetX, -viewport.offsetY)
+    this.layoutViewportBackgrounds()
+    if (hadTutorialOverlay) {
+      this.showTutorialOverlay()
+    }
+  }
+
+  layoutViewportBackgrounds() {
+    this.bgWhite?.setDisplaySize(WIDTH, HEIGHT)
+    this.colorBg?.setDisplaySize(WIDTH, HEIGHT)
+    this.bottomBg?.setSize(WIDTH, HEIGHT - TRAY_TOP_Y)
+    this.layoutRoomLineCovers()
+  }
+
+  createRoomLineCovers() {
+    if (!ROOM_LINE_COVER_ENABLED) return []
+
+    const blackLine = this.createRoomLineRectangles(
+      ROOM_LINE_COVER_SEGMENTS,
+      ROOM_LINE_COVER_Y,
+      ROOM_LINE_COVER_HEIGHT,
+      ROOM_LINE_COVER_COLOR,
+      ROOM_LINE_COVER_DEPTH,
+      'line',
+    )
+    const couchMask = this.createRoomLineRectangles(
+      ROOM_LINE_COUCH_MASK_SEGMENTS,
+      ROOM_LINE_COUCH_MASK_Y,
+      ROOM_LINE_COUCH_MASK_HEIGHT,
+      ROOM_LINE_COUCH_MASK_COLOR,
+      ROOM_LINE_COUCH_MASK_DEPTH,
+      'couch-mask',
+    )
+
+    return [...blackLine, ...couchMask]
+  }
+
+  createRoomLineRectangles(segments, y, height, color, depth, type) {
+    return segments.map((segment) => this.add.rectangle(
+      segment.x,
+      y,
+      segment.width,
+      height,
+      color,
+    )
+      .setOrigin(0, 0.5)
+      .setDepth(depth)
+      .setData('roomLineType', type))
+  }
+
+  layoutRoomLineCovers() {
+    if (!this.roomLineCovers?.length) return
+
+    this.roomLineCovers.forEach((line) => {
+      if (line.getData('roomLineType') !== 'line') return
+
+      line
+        .setPosition(-this.viewport.offsetX, ROOM_LINE_COVER_Y)
+        .setSize(this.viewport.internalWidth, ROOM_LINE_COVER_HEIGHT)
+    })
+  }
+
+  hideRoomLineCovers() {
+    this.roomLineCovers?.forEach((line) => line.setVisible(false))
   }
 
   startRound(index) {
@@ -242,28 +340,40 @@ export class StickerBookScene extends Phaser.Scene {
     const traySprite = first.getData('sprite')
     const trayBadge = first.getData('badge')
     const targetData = this.activeTargets.get(first.getData('id'))
-    const overlay = this.add.renderTexture(0, 0, WIDTH, HEIGHT)
+    const camera = this.cameras.main
+    const overlayOverscan = 24
+    const overlay = this.add.renderTexture(
+      -overlayOverscan,
+      -overlayOverscan,
+      camera.width + overlayOverscan * 2,
+      camera.height + overlayOverscan * 2,
+    )
       .setOrigin(0, 0)
+      .setScrollFactor(0)
       .setDepth(ACTIVE_DRAG_DEPTH)
+    overlay.setData('overscan', overlayOverscan)
+    this.tutorialOverlay = overlay
     overlay.fill(0x000000, TUTORIAL_OVERLAY_ALPHA)
     this.eraseSpriteShapeFromOverlay(overlay, traySprite, first.x, first.y)
     if (trayBadge) {
-      overlay.erase(trayBadge)
       this.eraseCircleFromOverlay(overlay, first.x + trayBadge.x, first.y + trayBadge.y, 56)
     }
 
     if (targetData) {
       this.eraseSpriteShapeFromOverlay(overlay, targetData.target, targetData.sticker.x, targetData.sticker.y)
-      overlay.erase(targetData.label)
+      this.eraseCircleFromOverlay(overlay, targetData.label.x, targetData.label.y, 34)
     }
-
-    this.tutorialOverlay = overlay
   }
 
   eraseSpriteShapeFromOverlay(overlay, source, x, y) {
     if (!source?.texture?.key) return
 
-    const temp = this.make.image({ x, y, key: source.texture.key, add: false })
+    const temp = this.make.image({
+      x: this.worldToOverlayX(x),
+      y: this.worldToOverlayY(y),
+      key: source.texture.key,
+      add: false,
+    })
     temp
       .setOrigin(source.originX, source.originY)
       .setScale(source.scaleX, source.scaleY)
@@ -275,9 +385,17 @@ export class StickerBookScene extends Phaser.Scene {
   eraseCircleFromOverlay(overlay, x, y, radius) {
     const cutout = this.make.graphics({ add: false })
     cutout.fillStyle(0xffffff, 1)
-    cutout.fillCircle(x, y, radius)
+    cutout.fillCircle(this.worldToOverlayX(x), this.worldToOverlayY(y), radius)
     overlay.erase(cutout)
     cutout.destroy()
+  }
+
+  worldToOverlayX(x) {
+    return x - this.cameras.main.scrollX + (this.tutorialOverlay?.getData('overscan') || 0)
+  }
+
+  worldToOverlayY(y) {
+    return y - this.cameras.main.scrollY + (this.tutorialOverlay?.getData('overscan') || 0)
   }
 
   showTutorialHint() {
@@ -319,16 +437,31 @@ export class StickerBookScene extends Phaser.Scene {
   }
 
   getPointerGamePosition(pointer) {
-    const canvas = this.game.canvas
-    const rect = canvas.getBoundingClientRect()
+    const client = this.getPointerClientPosition(pointer)
+    return this.clientToGamePosition(client.clientX, client.clientY)
+  }
+
+  getPointerClientPosition(pointer) {
     const event = pointer.event
     const source = event?.changedTouches?.[0] || event?.touches?.[0] || event
-    const clientX = source?.clientX ?? pointer.x
-    const clientY = source?.clientY ?? pointer.y
     return {
-      x: Phaser.Math.Clamp(((clientX - rect.left) / rect.width) * WIDTH, 0, WIDTH),
-      y: Phaser.Math.Clamp(((clientY - rect.top) / rect.height) * HEIGHT, 0, HEIGHT),
+      clientX: source?.clientX ?? pointer.x,
+      clientY: source?.clientY ?? pointer.y,
     }
+  }
+
+  clientToGamePosition(clientX, clientY) {
+    const canvas = this.game.canvas
+    const rect = canvas.getBoundingClientRect()
+    return {
+      x: ((clientX - rect.left) / rect.width) * this.viewport.internalWidth - this.viewport.offsetX,
+      y: ((clientY - rect.top) / rect.height) * this.viewport.internalHeight - this.viewport.offsetY,
+    }
+  }
+
+  isClientInsideCanvas(clientX, clientY) {
+    const position = this.clientToGamePosition(clientX, clientY)
+    return position.x >= 0 && position.x <= WIDTH && position.y >= 0 && position.y <= HEIGHT
   }
 
   unlockHtml5AudioTags() {
@@ -392,6 +525,10 @@ export class StickerBookScene extends Phaser.Scene {
 
   onTrayPointerDown(pointer, sprite) {
     pointer.event?.preventDefault?.()
+    const pointerId = pointer.event?.pointerId
+    if (pointerId !== undefined) {
+      this.game.canvas?.setPointerCapture?.(pointerId)
+    }
     this.primeAudioOnDragStart()
     this.registerActivity()
     const position = this.getPointerGamePosition(pointer)
@@ -404,6 +541,7 @@ export class StickerBookScene extends Phaser.Scene {
     sprite.setDepth(ACTIVE_DRAG_DEPTH).setScale(sprite.getData('homeScale') * 1.08)
     this.activeDrag = {
       pointerId: pointer.id,
+      domPointerId: pointer.event?.pointerId,
       sprite,
       offsetX: sprite.x - position.x,
       offsetY: sprite.y - position.y,
@@ -424,6 +562,10 @@ export class StickerBookScene extends Phaser.Scene {
   onPointerUp(pointer) {
     if (!this.activeDrag || this.activeDrag.pointerId !== pointer.id) return
     pointer.event?.preventDefault?.()
+    const pointerId = pointer.event?.pointerId
+    if (pointerId !== undefined) {
+      this.game.canvas?.releasePointerCapture?.(pointerId)
+    }
     this.scheduleInactivityHint()
     const { sprite } = this.activeDrag
     this.activeDrag = null
@@ -431,9 +573,11 @@ export class StickerBookScene extends Phaser.Scene {
     const targetData = this.activeTargets.get(id)
     if (!targetData) return
 
+    const { clientX, clientY } = this.getPointerClientPosition(pointer)
+    const completeAfterMove = this.registerMoveAttempt()
     const distance = Phaser.Math.Distance.Between(sprite.x, sprite.y, targetData.sticker.x, targetData.sticker.y)
-    if (distance < 145) {
-      this.placeSticker(sprite, targetData)
+    if (this.isClientInsideCanvas(clientX, clientY) && distance < 145) {
+      this.placeSticker(sprite, targetData, { completeAfterMove })
       return
     }
 
@@ -448,12 +592,23 @@ export class StickerBookScene extends Phaser.Scene {
       ease: 'Back.Out',
       onComplete: () => {
         sprite.setDepth(TRAY_ITEM_DEPTH)
+        if (completeAfterMove) {
+          this.completeGame()
+        }
       },
     })
   }
 
-  placeSticker(sprite, targetData) {
+  registerMoveAttempt() {
+    if (!ACTIVE_ITERATION.moveLimit || this.completed) return false
+
+    this.moveCount += 1
+    return this.moveCount >= ACTIVE_ITERATION.moveLimit
+  }
+
+  placeSticker(sprite, targetData, options = {}) {
     const { sticker, target, label } = targetData
+    const { completeAfterMove = false } = options
     const stickerSprite = sprite.getData('sprite')
     const badge = sprite.getData('badge')
     this.safePlay('correct', { volume: 0.65 })
@@ -488,6 +643,9 @@ export class StickerBookScene extends Phaser.Scene {
           duration: 500,
           onComplete: () => burst.destroy(),
         })
+        if (completeAfterMove) {
+          this.completeGame()
+        }
       },
     })
 
@@ -496,8 +654,12 @@ export class StickerBookScene extends Phaser.Scene {
     this.clearHandHint()
     this.scheduleInactivityHint()
 
-    if (this.activeTargets.size === 0) {
-      this.time.delayedCall(520, () => this.advanceRound())
+    if (!completeAfterMove && this.activeTargets.size === 0) {
+      this.time.delayedCall(520, () => {
+        if (!this.completed) {
+          this.advanceRound()
+        }
+      })
     }
   }
 
@@ -594,6 +756,7 @@ export class StickerBookScene extends Phaser.Scene {
     this.bgm.pause()
     this.bgm.currentTime = 0
     this.safePlay('finished', { volume: 0.8 })
+    this.hideRoomLineCovers()
     this.showRemainingStickers()
     this.game.events.emit('game-finished')
     this.tweens.add({ targets: this.colorBg, alpha: 1, duration: 540, ease: 'Sine.InOut' })

@@ -8,9 +8,9 @@ export const ITERATION_MODES = {
 }
 export const DEFAULT_ITERATION_MODE = ITERATION_MODES.TEN_CLICKS
 export const ITERATION_CONFIGS = {
-  [ITERATION_MODES.TEN_CLICKS]: { correctPlacementsRequired: 10, timeLimitMs: null },
-  [ITERATION_MODES.SIXTY_SECONDS]: { correctPlacementsRequired: null, timeLimitMs: 60000 },
-  [ITERATION_MODES.FULL_GAME]: { correctPlacementsRequired: null, timeLimitMs: null },
+  [ITERATION_MODES.TEN_CLICKS]: { moveLimit: 10, correctPlacementsRequired: null, timeLimitMs: null },
+  [ITERATION_MODES.SIXTY_SECONDS]: { moveLimit: null, correctPlacementsRequired: null, timeLimitMs: 60000 },
+  [ITERATION_MODES.FULL_GAME]: { moveLimit: null, correctPlacementsRequired: null, timeLimitMs: null },
 }
 
 function normalizeIterationMode(value) {
@@ -28,6 +28,28 @@ export const GAME_BOTTOM_BACKGROUND_COLOR = 0x67a5e6
 export const GAME_BOTTOM_BACKGROUND_CSS = '#67a5e6'
 export const ROOM_LINE_Y = 640
 export const ROOM_LINE_CSS = '#666666'
+export const ROOM_LINE_EXTENSION_OFFSET_PX = 0
+export const ROOM_LINE_EXTENSION_Y_OFFSET_PX = ROOM_LINE_EXTENSION_OFFSET_PX
+export const ROOM_LINE_EXTENSION_THICKNESS_PX = 4
+export const ROOM_LINE_EXTENSION_LEFT_OVERLAP_PX = 2
+export const ROOM_LINE_EXTENSION_RIGHT_OVERLAP_PX = 2
+export const ROOM_LINE_COVER_ENABLED = true
+export const ROOM_LINE_COVER_COLOR = 0x000000
+export const ROOM_LINE_COVER_Y = ROOM_LINE_Y
+export const ROOM_LINE_COVER_HEIGHT = 5
+export const ROOM_LINE_COVER_DEPTH = 0.05
+export const ROOM_LINE_COVER_SEGMENTS = [
+  { x: 0, width: WIDTH },
+]
+export const ROOM_LINE_COUCH_MASK_COLOR = 0xffffff
+export const ROOM_LINE_COUCH_MASK_Y = ROOM_LINE_Y
+export const ROOM_LINE_COUCH_MASK_CENTER_X = (WIDTH - 5) / 2
+export const ROOM_LINE_COUCH_MASK_WIDTH = 505
+export const ROOM_LINE_COUCH_MASK_HEIGHT = 7
+export const ROOM_LINE_COUCH_MASK_DEPTH = ROOM_LINE_COVER_DEPTH + 0.01
+export const ROOM_LINE_COUCH_MASK_SEGMENTS = [
+  { x: ROOM_LINE_COUCH_MASK_CENTER_X - ROOM_LINE_COUCH_MASK_WIDTH / 2, width: ROOM_LINE_COUCH_MASK_WIDTH },
+]
 export const TRAY_BADGE_OFFSET_X = 102
 export const TRAY_BADGE_OFFSET_Y = -150
 export const TRAY_BADGE_LOCAL_OFFSET_Y = -80
